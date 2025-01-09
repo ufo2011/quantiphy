@@ -14,13 +14,26 @@ Quantities
    .. autoclasstoc::
 
 
+Quantity Functions
+------------------
+
+These functions are provided for those that prefer use *QuantiPhy* to convert 
+numbers in strings directly to floats, rather than keep the values around as 
+:class:`Quantity` objects.
+
+.. autofunction:: as_real
+.. autofunction:: as_tuple
+.. autofunction:: render
+.. autofunction:: fixed
+.. autofunction:: binary
+
+
 Unit Conversion
 ===============
 
 .. autoclass:: UnitConversion
    :members:
 
-.. ignore the following (there is only one method, so no need for TOC)
    .. autoclasstoc::
 
 

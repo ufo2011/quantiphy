@@ -305,7 +305,7 @@ a variety of casual units of time.  *QuantiPhy* only pre-defines conversions for
 time units that are unambiguous and commonly used in scientific computation, so 
 that leaves out units like months and years. However, in many situations the 
 goal is simplicity rather than precision. In such a situation, it is convenient 
-to support any units a user may reasonable expect to use. In a casual setting it 
+to support any units a user may reasonably expect to use. In a casual setting it 
 would be very unusual to use SI scale factors, so there use will be prohibited 
 to allow a greater range of units (ex. m for minutes).
 
@@ -919,6 +919,7 @@ this example can be found on GitHub.
 
 
 .. bitcoin example {{{1
+.. _quantiphy bitcoin example:
 
 Dynamic Unit Conversions
 ------------------------
@@ -928,7 +929,7 @@ are set they do not change during the life of the process.  However, that need
 not be true if functions are used to perform the conversion.  In the following 
 example, the current price of Bitcoin is queried from a price service and used 
 in the conversion.  The price service is queried each time a conversion is 
-performed, so it is always up-to-date, no longer how long the program runs.
+performed, so it is always up-to-date, no matter how long the program runs.
 
 .. code-block:: python
 
@@ -972,7 +973,43 @@ performed, so it is always up-to-date, no longer how long the program runs.
     print(f'{unit_btc:>8,.2p} = {unit_btc:,.2p$}')
     print(f'{unit_dollar:>8,.2p} = {unit_dollar:,.0psat}')
 
-When run, the script prints something like this:
+When run, the script prints something like this::
 
-   1 BTC = $46,007
-      $1 = 2,174 sat
+   1 BTC = $17,211.91
+      $1 = 5,810 sat
+
+.. pluralize example {{{1
+.. _quantiphy pluralize example:
+
+Pluralize
+---------
+
+Using some external packages you can monkey patch a new method into *Quantity* 
+that converts quantities into the singular or plural forms of speech.
+
+.. ignore:
+
+    >>> Quantity.set_prefs(spacer=' ')
+
+.. code-block:: python
+
+    >>> from quantiphy import Quantity
+    >>> from inform import plural
+
+    >>> def pluralize(self):
+    ...     with self.prefs(form='fixed', show_units=False):
+    ...         return plural(self).format(self.plural_format)
+
+    >>> class Loaves(Quantity):
+    ...     units = 'loaves'
+    ...     plural_format = "# /loaf/loaves"
+    ...     pluralize = pluralize
+
+    >>> with Quantity.prefs(form='fixed'):
+    ...     for count in [0, 1, 2, 0.5]:
+    ...         q = Loaves(count)
+    ...         print(q, '->', q.pluralize())
+    0 loaves -> 0 loaves
+    1 loaves -> 1 loaf
+    2 loaves -> 2 loaves
+    0.5 loaves -> 0.5 loaves

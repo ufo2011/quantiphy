@@ -5,7 +5,6 @@ import pytest
 
 def test_format():
     Quantity.reset_prefs()
-    print(Quantity._preferences)
     Quantity.set_prefs(spacer=None, show_label=None, label_fmt=None, label_fmt_full=None, show_desc=False)
     q=Quantity('f = 1420.405751786 MHz -- frequency of hydrogen line')
     assert '{}'.format(q) == '1.4204 GHz'
@@ -26,6 +25,11 @@ def test_format():
     assert '{:n}'.format(q) == 'f'
     assert '{:d}'.format(q) == 'frequency of hydrogen line'
     assert '{:p}'.format(q) == '1420405751.786 Hz'
+    assert '{:pHz}'.format(q) == '1420405751.786 Hz'
+    assert '{:pkHz}'.format(q) == '1420405.7518 kHz'
+    assert '{:pMHz}'.format(q) == '1420.4058 MHz'
+    assert '{:pGHz}'.format(q) == '1.4204 GHz'
+    assert '{:pTHz}'.format(q) == '0.0014 THz'
     assert '{:,p}'.format(q) == '1,420,405,751.786 Hz'
     assert '{:P}'.format(q) == 'f = 1420405751.786 Hz'
     assert '{:,P}'.format(q) == 'f = 1,420,405,751.786 Hz'
@@ -35,19 +39,24 @@ def test_format():
     assert '{:.0p}'.format(q) == '1420405752 Hz'
     assert '{:#.0q}'.format(q) == '1 GHz'
     assert '{:#.0p}'.format(q) == '1420405752. Hz'
+    assert '{:#.0f}'.format(q) == '1420405752.'
+    assert '{:#.3f}'.format(q) == '1420405751.786'
+    assert '{:.0g}'.format(q) == '1e+09'
+    assert '{:#.0g}'.format(q) == '1.e+09'
+    assert '{:#.3g}'.format(q) == '1.420e+09'
 
-    q=Quantity('2ns')
+    q = Quantity('2ns')
     assert float(q) == 2e-9
 
     with pytest.raises(ValueError) as exception:
         q = Quantity('1ns')
-        '{:z}'.format(q)
-    assert exception.value.args[0] == "Unknown format code 'z' for object of type 'float'"
+        print('{:x}'.format(q))
+    assert exception.value.args[0] == "Unknown format code 'x' for object of type 'float'"
 
 def test_full_format():
     Quantity.set_prefs(spacer=None, show_label=None, label_fmt=None, label_fmt_full=None, show_desc=False)
     Quantity.set_prefs(prec='full')
-    q=Quantity('f = 1420.405751786 MHz -- frequency of hydrogen line')
+    q = Quantity('f = 1420.405751786 MHz — frequency of hydrogen line')
     assert '{}'.format(q) == '1.420405751786 GHz'
     assert '{:.8}'.format(q) == '1.42040575 GHz'
     assert '{:.8s}'.format(q) == '1.42040575 GHz'
@@ -65,10 +74,15 @@ def test_full_format():
     assert '{:G}'.format(q) == 'f = 1420405751.786'
     assert '{:n}'.format(q) == 'f'
     assert '{:d}'.format(q) == 'frequency of hydrogen line'
-    assert '{:.2p}'.format(q) == '1420405751.79 Hz'
-    assert '{:,.2p}'.format(q) == '1,420,405,751.79 Hz'
-    assert '{:.2P}'.format(q) == 'f = 1420405751.79 Hz'
-    assert '{:,.2P}'.format(q) == 'f = 1,420,405,751.79 Hz'
+    assert '{:p}'.format(q) == '1420405751.786 Hz'
+    assert '{:,p}'.format(q) == '1,420,405,751.786 Hz'
+    assert '{:,.2pHz}'.format(q) == '1,420,405,751.79 Hz'
+    assert '{:,.2pkHz}'.format(q) == '1,420,405.75 kHz'
+    assert '{:,.2pMHz}'.format(q) == '1,420.41 MHz'
+    assert '{:,.2pGHz}'.format(q) == '1.42 GHz'
+    assert '{:,.2pTHz}'.format(q) == '0 THz'
+    assert '{:P}'.format(q) == 'f = 1420405751.786 Hz'
+    assert '{:,P}'.format(q) == 'f = 1,420,405,751.786 Hz'
     assert '{:#.3q}'.format(q) == '1.420 GHz'
     assert '{:#.6p}'.format(q) == '1420405751.786000 Hz'
     assert '{:.0q}'.format(q) == '1 GHz'
@@ -82,14 +96,29 @@ def test_full_format():
         1.234567 +1.234567 -1.234567
         $1.234567 +$1.234567 -$1.234567
         1.234567_V +1.234567_V -1.234567_V
+        -0 -0.0000 -0.0_s -$0.00
     '''
     for given in values.split():
         expected = given.lstrip('+').replace('_', ' ')
         q = Quantity(given)
-        assert q.render(form='si', prec='full', strip_zeros=False) == expected
+        if q == 0 and expected[0] == '-':
+            expected = expected[1:]
+        assert q.render(form='si', strip_zeros=False) == expected, given
+        assert q.render(form='si', prec='full', strip_zeros=False) == expected, given
 
-    q=Quantity('2ns')
-    assert float(q) == 2e-9
+    # check fixed()
+    base = '000654321.123456000'
+    for d in range(-12, 12):
+        num = f"{base}e{d}"
+        q = Quantity(num, '$')
+
+        prec = max(6-d, 0)
+        fmtd = f"{float(num):25.{prec}f}".strip()
+        assert f"${fmtd}" == q.fixed()
+
+    q = Quantity('1234.56 Ω')
+    assert q.fixed(scale='MΩ') == "0.00123456 MΩ"
+
 
 def test_width():
     Quantity.set_prefs(spacer=None, show_label=None, label_fmt=None, label_fmt_full=None, show_desc=False)
@@ -347,6 +376,43 @@ def test_format_method():
     assert q.format('#P') == 'f = 1420405751.7860 Hz'
     assert q.format('#,P') == 'f = 1,420,405,751.7860 Hz'
 
+    Quantity.set_prefs(
+        spacer = None,
+        show_label = None,
+        label_fmt = None,
+        label_fmt_full = None,
+        show_desc = False,
+        prec = 4,
+        strip_zeros = False,
+    )
+    q=Quantity('f = 1420.405751786 MHz -- frequency of hydrogen line')
+    assert q.format() == '1.4204 GHz'
+    assert q.format('') == '1.4204 GHz'
+    assert q.format('.8') == '1.42040575 GHz'
+    assert q.format('.8s') == '1.42040575 GHz'
+    assert q.format('.8S') == 'f = 1.42040575 GHz'
+    assert q.format('.8q') == '1.42040575 GHz'
+    assert q.format('.8Q') == 'f = 1.42040575 GHz'
+    assert q.format('r') == '1.4204G'
+    assert q.format('R') == 'f = 1.4204G'
+    assert q.format('u') == 'Hz'
+    assert q.format('f') == '1420405751.7860'
+    assert q.format('F') == 'f = 1420405751.7860'
+    assert q.format('e') == '1.4204e+09'
+    assert q.format('E') == 'f = 1.4204e+09'
+    assert q.format('g') == '1.4204e+09'
+    assert q.format('G') == 'f = 1.4204e+09'
+    assert q.format('n') == 'f'
+    assert q.format('d') == 'frequency of hydrogen line'
+    assert q.format('p') == '1420405751.7860 Hz'
+    assert q.format(',p') == '1,420,405,751.7860 Hz'
+    assert q.format('P') == 'f = 1420405751.7860 Hz'
+    assert q.format(',P') == 'f = 1,420,405,751.7860 Hz'
+    assert q.format('#p') == '1420405751.7860 Hz'
+    assert q.format('#,p') == '1,420,405,751.7860 Hz'
+    assert q.format('#P') == 'f = 1420405751.7860 Hz'
+    assert q.format('#,P') == 'f = 1,420,405,751.7860 Hz'
+
 def test_render():
     Quantity.set_prefs(
         spacer = None,
@@ -388,18 +454,34 @@ def test_render():
     assert q.fixed(strip_zeros=False) == '$1000000.0000'
     assert q.fixed(strip_zeros=True, strip_radix=False) == '$1000000.'
     assert q.fixed(prec='full') == '$1000000'
-    assert q.fixed(prec='full', strip_zeros=False) == '$1000000.000000000000'
+    assert q.fixed(prec='full', strip_zeros=False) == '$1000000'
     assert q.render(form='fixed') == '$1000000'
 
     q=Quantity('$100')
     assert q.fixed(prec=0, strip_zeros=False, strip_radix=False) == '$100.'
     assert q.fixed(prec=0, strip_zeros=True, strip_radix=False) == '$100.'
+    assert q.fixed(prec=0, strip_zeros=True, strip_radix='cover') == '$100.0'
     assert q.fixed(prec=0, strip_zeros=False, strip_radix=True) == '$100'
     assert q.fixed(prec=0, strip_zeros=True, strip_radix=True) == '$100'
     assert q.fixed(prec=2, strip_zeros=False, strip_radix=False) == '$100.00'
     assert q.fixed(prec=2, strip_zeros=True, strip_radix=False) == '$100.'
+    assert q.fixed(prec=2, strip_zeros=True, strip_radix='cover') == '$100.0'
     assert q.fixed(prec=2, strip_zeros=False, strip_radix=True) == '$100.00'
     assert q.fixed(prec=2, strip_zeros=True, strip_radix=True) == '$100'
+
+    q=Quantity('$123.45')
+    assert q.render(prec=0, strip_zeros=False, strip_radix='cover') == '$100.0'
+    assert q.render(prec=0, strip_zeros=True, strip_radix=False) == '$100.'
+    assert q.render(prec=0, strip_zeros=False, strip_radix=True) == '$100'
+    assert q.render(prec=0, strip_zeros=True, strip_radix=True) == '$100'
+    assert q.render(prec=2, strip_zeros=False, strip_radix='cover') == '$123.0'
+    assert q.render(prec=2, strip_zeros=True, strip_radix=False) == '$123.'
+    assert q.render(prec=2, strip_zeros=False, strip_radix=True) == '$123'
+    assert q.render(prec=2, strip_zeros=True, strip_radix=True) == '$123'
+    assert q.render(prec=4, strip_zeros=False, strip_radix='cover') == '$123.45'
+    assert q.render(prec=4, strip_zeros=True, strip_radix=False) == '$123.45'
+    assert q.render(prec=4, strip_zeros=False, strip_radix=True) == '$123.45'
+    assert q.render(prec=4, strip_zeros=True, strip_radix=True) == '$123.45'
 
 def test_sign():
     Quantity.set_prefs(spacer=None, show_label=None, label_fmt=None, label_fmt_full=None, show_desc=False)
@@ -791,6 +873,223 @@ def test_radix_comma_exception():
             Quantity('$1M')
     assert exception.value.args[0] == "comma and radix must differ."
 
+
+def test_output_sf():
+    with Quantity.prefs(output_sf = Quantity.all_sf):
+        q=Quantity('c')
+        assert f"{Quantity(1e35, 'Hz')}" == '100e33 Hz'
+        assert f"{Quantity(1e34, 'Hz')}" == '10e33 Hz'
+        assert f"{Quantity(1e33, 'Hz')}" == '1e33 Hz'
+        assert f"{Quantity(1e32, 'Hz')}" == '100 QHz'
+        assert f"{Quantity(1e31, 'Hz')}" == '10 QHz'
+        assert f"{Quantity(1e30, 'Hz')}" == '1 QHz'
+        assert f"{Quantity(1e29, 'Hz')}" == '100 RHz'
+        assert f"{Quantity(1e28, 'Hz')}" == '10 RHz'
+        assert f"{Quantity(1e27, 'Hz')}" == '1 RHz'
+        assert f"{Quantity(1e26, 'Hz')}" == '100 YHz'
+        assert f"{Quantity(1e25, 'Hz')}" == '10 YHz'
+        assert f"{Quantity(1e24, 'Hz')}" == '1 YHz'
+        assert f"{Quantity(1e23, 'Hz')}" == '100 ZHz'
+        assert f"{Quantity(1e22, 'Hz')}" == '10 ZHz'
+        assert f"{Quantity(1e21, 'Hz')}" == '1 ZHz'
+        assert f"{Quantity(1e20, 'Hz')}" == '100 EHz'
+        assert f"{Quantity(1e19, 'Hz')}" == '10 EHz'
+        assert f"{Quantity(1e18, 'Hz')}" == '1 EHz'
+        assert f"{Quantity(1e17, 'Hz')}" == '100 PHz'
+        assert f"{Quantity(1e16, 'Hz')}" == '10 PHz'
+        assert f"{Quantity(1e15, 'Hz')}" == '1 PHz'
+        assert f"{Quantity(1e14, 'Hz')}" == '100 THz'
+        assert f"{Quantity(1e13, 'Hz')}" == '10 THz'
+        assert f"{Quantity(1e12, 'Hz')}" == '1 THz'
+        assert f"{Quantity(1e11, 'Hz')}" == '100 GHz'
+        assert f"{Quantity(1e10, 'Hz')}" == '10 GHz'
+        assert f"{Quantity(1e9, 'Hz')}" == '1 GHz'
+        assert f"{Quantity(1e8, 'Hz')}" == '100 MHz'
+        assert f"{Quantity(1e7, 'Hz')}" == '10 MHz'
+        assert f"{Quantity(1e6, 'Hz')}" == '1 MHz'
+        assert f"{Quantity(1e5, 'Hz')}" == '100 kHz'
+        assert f"{Quantity(1e4, 'Hz')}" == '10 kHz'
+        assert f"{Quantity(1e3, 'Hz')}" == '1 kHz'
+        assert f"{Quantity(1e2, 'Hz')}" == '100 Hz'
+        assert f"{Quantity(1e1, 'Hz')}" == '10 Hz'
+        assert f"{Quantity(1e0, 'Hz')}" == '1 Hz'
+        assert f"{Quantity(1e-1, 'Hz')}" == '100 mHz'
+        assert f"{Quantity(1e-2, 'Hz')}" == '10 mHz'
+        assert f"{Quantity(1e-3, 'Hz')}" == '1 mHz'
+        assert f"{Quantity(1e-4, 'Hz')}" == '100 uHz'
+        assert f"{Quantity(1e-5, 'Hz')}" == '10 uHz'
+        assert f"{Quantity(1e-6, 'Hz')}" == '1 uHz'
+        assert f"{Quantity(1e-7, 'Hz')}" == '100 nHz'
+        assert f"{Quantity(1e-8, 'Hz')}" == '10 nHz'
+        assert f"{Quantity(1e-9, 'Hz')}" == '1 nHz'
+        assert f"{Quantity(1e-10, 'Hz')}" == '100 pHz'
+        assert f"{Quantity(1e-11, 'Hz')}" == '10 pHz'
+        assert f"{Quantity(1e-12, 'Hz')}" == '1 pHz'
+        assert f"{Quantity(1e-13, 'Hz')}" == '100 fHz'
+        assert f"{Quantity(1e-14, 'Hz')}" == '10 fHz'
+        assert f"{Quantity(1e-15, 'Hz')}" == '1 fHz'
+        assert f"{Quantity(1e-16, 'Hz')}" == '100 aHz'
+        assert f"{Quantity(1e-17, 'Hz')}" == '10 aHz'
+        assert f"{Quantity(1e-18, 'Hz')}" == '1 aHz'
+        assert f"{Quantity(1e-19, 'Hz')}" == '100 zHz'
+        assert f"{Quantity(1e-20, 'Hz')}" == '10 zHz'
+        assert f"{Quantity(1e-21, 'Hz')}" == '1 zHz'
+        assert f"{Quantity(1e-22, 'Hz')}" == '100 yHz'
+        assert f"{Quantity(1e-23, 'Hz')}" == '10 yHz'
+        assert f"{Quantity(1e-24, 'Hz')}" == '1 yHz'
+        assert f"{Quantity(1e-25, 'Hz')}" == '100 rHz'
+        assert f"{Quantity(1e-26, 'Hz')}" == '10 rHz'
+        assert f"{Quantity(1e-27, 'Hz')}" == '1 rHz'
+        assert f"{Quantity(1e-28, 'Hz')}" == '100 qHz'
+        assert f"{Quantity(1e-29, 'Hz')}" == '10 qHz'
+        assert f"{Quantity(1e-30, 'Hz')}" == '1 qHz'
+        assert f"{Quantity(1e-31, 'Hz')}" == '100e-33 Hz'
+        assert f"{Quantity(1e-32, 'Hz')}" == '10e-33 Hz'
+        assert f"{Quantity(1e-33, 'Hz')}" == '1e-33 Hz'
+
+    with Quantity.prefs(output_sf = 'YZEPTGMkmunpfazy'):
+        q=Quantity('c')
+        assert f"{Quantity(1e35, 'Hz')}" == '100e33 Hz'
+        assert f"{Quantity(1e34, 'Hz')}" == '10e33 Hz'
+        assert f"{Quantity(1e33, 'Hz')}" == '1e33 Hz'
+        assert f"{Quantity(1e32, 'Hz')}" == '100e30 Hz'
+        assert f"{Quantity(1e31, 'Hz')}" == '10e30 Hz'
+        assert f"{Quantity(1e30, 'Hz')}" == '1e30 Hz'
+        assert f"{Quantity(1e29, 'Hz')}" == '100e27 Hz'
+        assert f"{Quantity(1e28, 'Hz')}" == '10e27 Hz'
+        assert f"{Quantity(1e27, 'Hz')}" == '1e27 Hz'
+        assert f"{Quantity(1e26, 'Hz')}" == '100 YHz'
+        assert f"{Quantity(1e25, 'Hz')}" == '10 YHz'
+        assert f"{Quantity(1e24, 'Hz')}" == '1 YHz'
+        assert f"{Quantity(1e23, 'Hz')}" == '100 ZHz'
+        assert f"{Quantity(1e22, 'Hz')}" == '10 ZHz'
+        assert f"{Quantity(1e21, 'Hz')}" == '1 ZHz'
+        assert f"{Quantity(1e20, 'Hz')}" == '100 EHz'
+        assert f"{Quantity(1e19, 'Hz')}" == '10 EHz'
+        assert f"{Quantity(1e18, 'Hz')}" == '1 EHz'
+        assert f"{Quantity(1e17, 'Hz')}" == '100 PHz'
+        assert f"{Quantity(1e16, 'Hz')}" == '10 PHz'
+        assert f"{Quantity(1e15, 'Hz')}" == '1 PHz'
+        assert f"{Quantity(1e14, 'Hz')}" == '100 THz'
+        assert f"{Quantity(1e13, 'Hz')}" == '10 THz'
+        assert f"{Quantity(1e12, 'Hz')}" == '1 THz'
+        assert f"{Quantity(1e11, 'Hz')}" == '100 GHz'
+        assert f"{Quantity(1e10, 'Hz')}" == '10 GHz'
+        assert f"{Quantity(1e9, 'Hz')}" == '1 GHz'
+        assert f"{Quantity(1e8, 'Hz')}" == '100 MHz'
+        assert f"{Quantity(1e7, 'Hz')}" == '10 MHz'
+        assert f"{Quantity(1e6, 'Hz')}" == '1 MHz'
+        assert f"{Quantity(1e5, 'Hz')}" == '100 kHz'
+        assert f"{Quantity(1e4, 'Hz')}" == '10 kHz'
+        assert f"{Quantity(1e3, 'Hz')}" == '1 kHz'
+        assert f"{Quantity(1e2, 'Hz')}" == '100 Hz'
+        assert f"{Quantity(1e1, 'Hz')}" == '10 Hz'
+        assert f"{Quantity(1e0, 'Hz')}" == '1 Hz'
+        assert f"{Quantity(1e-1, 'Hz')}" == '100 mHz'
+        assert f"{Quantity(1e-2, 'Hz')}" == '10 mHz'
+        assert f"{Quantity(1e-3, 'Hz')}" == '1 mHz'
+        assert f"{Quantity(1e-4, 'Hz')}" == '100 uHz'
+        assert f"{Quantity(1e-5, 'Hz')}" == '10 uHz'
+        assert f"{Quantity(1e-6, 'Hz')}" == '1 uHz'
+        assert f"{Quantity(1e-7, 'Hz')}" == '100 nHz'
+        assert f"{Quantity(1e-8, 'Hz')}" == '10 nHz'
+        assert f"{Quantity(1e-9, 'Hz')}" == '1 nHz'
+        assert f"{Quantity(1e-10, 'Hz')}" == '100 pHz'
+        assert f"{Quantity(1e-11, 'Hz')}" == '10 pHz'
+        assert f"{Quantity(1e-12, 'Hz')}" == '1 pHz'
+        assert f"{Quantity(1e-13, 'Hz')}" == '100 fHz'
+        assert f"{Quantity(1e-14, 'Hz')}" == '10 fHz'
+        assert f"{Quantity(1e-15, 'Hz')}" == '1 fHz'
+        assert f"{Quantity(1e-16, 'Hz')}" == '100 aHz'
+        assert f"{Quantity(1e-17, 'Hz')}" == '10 aHz'
+        assert f"{Quantity(1e-18, 'Hz')}" == '1 aHz'
+        assert f"{Quantity(1e-19, 'Hz')}" == '100 zHz'
+        assert f"{Quantity(1e-20, 'Hz')}" == '10 zHz'
+        assert f"{Quantity(1e-21, 'Hz')}" == '1 zHz'
+        assert f"{Quantity(1e-22, 'Hz')}" == '100 yHz'
+        assert f"{Quantity(1e-23, 'Hz')}" == '10 yHz'
+        assert f"{Quantity(1e-24, 'Hz')}" == '1 yHz'
+        assert f"{Quantity(1e-25, 'Hz')}" == '100e-27 Hz'
+        assert f"{Quantity(1e-26, 'Hz')}" == '10e-27 Hz'
+        assert f"{Quantity(1e-27, 'Hz')}" == '1e-27 Hz'
+        assert f"{Quantity(1e-28, 'Hz')}" == '100e-30 Hz'
+        assert f"{Quantity(1e-29, 'Hz')}" == '10e-30 Hz'
+        assert f"{Quantity(1e-30, 'Hz')}" == '1e-30 Hz'
+        assert f"{Quantity(1e-31, 'Hz')}" == '100e-33 Hz'
+        assert f"{Quantity(1e-32, 'Hz')}" == '10e-33 Hz'
+        assert f"{Quantity(1e-33, 'Hz')}" == '1e-33 Hz'
+
+    with Quantity.prefs(output_sf = None):
+        q=Quantity('c')
+        assert f"{Quantity(1e35, 'Hz')}" == '100e33 Hz'
+        assert f"{Quantity(1e34, 'Hz')}" == '10e33 Hz'
+        assert f"{Quantity(1e33, 'Hz')}" == '1e33 Hz'
+        assert f"{Quantity(1e32, 'Hz')}" == '100e30 Hz'
+        assert f"{Quantity(1e31, 'Hz')}" == '10e30 Hz'
+        assert f"{Quantity(1e30, 'Hz')}" == '1e30 Hz'
+        assert f"{Quantity(1e29, 'Hz')}" == '100e27 Hz'
+        assert f"{Quantity(1e28, 'Hz')}" == '10e27 Hz'
+        assert f"{Quantity(1e27, 'Hz')}" == '1e27 Hz'
+        assert f"{Quantity(1e26, 'Hz')}" == '100e24 Hz'
+        assert f"{Quantity(1e25, 'Hz')}" == '10e24 Hz'
+        assert f"{Quantity(1e24, 'Hz')}" == '1e24 Hz'
+        assert f"{Quantity(1e23, 'Hz')}" == '100e21 Hz'
+        assert f"{Quantity(1e22, 'Hz')}" == '10e21 Hz'
+        assert f"{Quantity(1e21, 'Hz')}" == '1e21 Hz'
+        assert f"{Quantity(1e20, 'Hz')}" == '100e18 Hz'
+        assert f"{Quantity(1e19, 'Hz')}" == '10e18 Hz'
+        assert f"{Quantity(1e18, 'Hz')}" == '1e18 Hz'
+        assert f"{Quantity(1e17, 'Hz')}" == '100e15 Hz'
+        assert f"{Quantity(1e16, 'Hz')}" == '10e15 Hz'
+        assert f"{Quantity(1e15, 'Hz')}" == '1e15 Hz'
+        assert f"{Quantity(1e14, 'Hz')}" == '100 THz'
+        assert f"{Quantity(1e13, 'Hz')}" == '10 THz'
+        assert f"{Quantity(1e12, 'Hz')}" == '1 THz'
+        assert f"{Quantity(1e11, 'Hz')}" == '100 GHz'
+        assert f"{Quantity(1e10, 'Hz')}" == '10 GHz'
+        assert f"{Quantity(1e9, 'Hz')}" == '1 GHz'
+        assert f"{Quantity(1e8, 'Hz')}" == '100 MHz'
+        assert f"{Quantity(1e7, 'Hz')}" == '10 MHz'
+        assert f"{Quantity(1e6, 'Hz')}" == '1 MHz'
+        assert f"{Quantity(1e5, 'Hz')}" == '100 kHz'
+        assert f"{Quantity(1e4, 'Hz')}" == '10 kHz'
+        assert f"{Quantity(1e3, 'Hz')}" == '1 kHz'
+        assert f"{Quantity(1e2, 'Hz')}" == '100 Hz'
+        assert f"{Quantity(1e1, 'Hz')}" == '10 Hz'
+        assert f"{Quantity(1e0, 'Hz')}" == '1 Hz'
+        assert f"{Quantity(1e-1, 'Hz')}" == '100 mHz'
+        assert f"{Quantity(1e-2, 'Hz')}" == '10 mHz'
+        assert f"{Quantity(1e-3, 'Hz')}" == '1 mHz'
+        assert f"{Quantity(1e-4, 'Hz')}" == '100 uHz'
+        assert f"{Quantity(1e-5, 'Hz')}" == '10 uHz'
+        assert f"{Quantity(1e-6, 'Hz')}" == '1 uHz'
+        assert f"{Quantity(1e-7, 'Hz')}" == '100 nHz'
+        assert f"{Quantity(1e-8, 'Hz')}" == '10 nHz'
+        assert f"{Quantity(1e-9, 'Hz')}" == '1 nHz'
+        assert f"{Quantity(1e-10, 'Hz')}" == '100 pHz'
+        assert f"{Quantity(1e-11, 'Hz')}" == '10 pHz'
+        assert f"{Quantity(1e-12, 'Hz')}" == '1 pHz'
+        assert f"{Quantity(1e-13, 'Hz')}" == '100 fHz'
+        assert f"{Quantity(1e-14, 'Hz')}" == '10 fHz'
+        assert f"{Quantity(1e-15, 'Hz')}" == '1 fHz'
+        assert f"{Quantity(1e-16, 'Hz')}" == '100 aHz'
+        assert f"{Quantity(1e-17, 'Hz')}" == '10 aHz'
+        assert f"{Quantity(1e-18, 'Hz')}" == '1 aHz'
+        assert f"{Quantity(1e-19, 'Hz')}" == '100e-21 Hz'
+        assert f"{Quantity(1e-20, 'Hz')}" == '10e-21 Hz'
+        assert f"{Quantity(1e-21, 'Hz')}" == '1e-21 Hz'
+        assert f"{Quantity(1e-22, 'Hz')}" == '100e-24 Hz'
+        assert f"{Quantity(1e-23, 'Hz')}" == '10e-24 Hz'
+        assert f"{Quantity(1e-24, 'Hz')}" == '1e-24 Hz'
+        assert f"{Quantity(1e-25, 'Hz')}" == '100e-27 Hz'
+        assert f"{Quantity(1e-26, 'Hz')}" == '10e-27 Hz'
+        assert f"{Quantity(1e-27, 'Hz')}" == '1e-27 Hz'
+        assert f"{Quantity(1e-28, 'Hz')}" == '100e-30 Hz'
+        assert f"{Quantity(1e-29, 'Hz')}" == '10e-30 Hz'
+        assert f"{Quantity(1e-30, 'Hz')}" == '1e-30 Hz'
+        assert f"{Quantity(1e-31, 'Hz')}" == '100e-33 Hz'
+        assert f"{Quantity(1e-32, 'Hz')}" == '10e-33 Hz'
+        assert f"{Quantity(1e-33, 'Hz')}" == '1e-33 Hz'
 
 if __name__ == '__main__':
     # As a debugging aid allow the tests to be run on their own, outside pytest.

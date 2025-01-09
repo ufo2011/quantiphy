@@ -5,13 +5,37 @@ Releases
 
 Latest development release
 --------------------------
-| Version: 2.18.0
-| Released: 2022-08-31
+| Version: 2.20
+| Released: 2024-04-27
+
+- Remove % from *tight_units* list.
+- Add spacer keyword argument to :meth:`Quantity.render`,
+  :meth:`Quantity.fixed` and :meth:`Quantity.binary`.
+
+
+2.20 (2024-04-27)
+-----------------
+- Include full quantities if available in :class:`IncompatibleUnits` errors
+
+
+2.19 (2023-01-05)
+-----------------
+- Added new standard SI scale factors (*Q*, *R*, *r*, *q*).
+- Subclasses of :class:`Quantity` with units now convert values to the desired 
+  units rather than allowing the units of the class to be overridden by those of 
+  the value.
+- Added scale factor conversion.
+- Added quantity functions: :func:`as_real`, :func:`as_tuple`, :func:`render`, 
+  :func:`fixed`, and :func:`binary`.
+- Fixed rendering of full precision numbers in :meth:`Quantity.fixed()`.
+- Added *preferred_units* :class:`Quantity` preference.
+- Added “cover” option to *strip_radix* :class:`Quantity` preference.
+- Added type hints.
 
 
 2.18 (2022-08-31)
 -----------------
-- Support parameterized unit conversions (such as molarity).
+- Support parametrized unit conversions (such as molarity).
 - Allow % to act as a scale factor.
 - First argument of scaling functions are now guaranteed to be quantities.
 - Added :func:`UnitConversion.fixture` decorator function.
@@ -66,7 +90,7 @@ Latest development release
 ----------------
 - Added *negligible*, *tight_units*, *nan*, and *inf* preferences.
 - Added *negligible* argument to render.
-- Added *infinity_symbol* attribute.
+- Added :attr:`Quantity.infinity_symbol` attribute.
 - Changed the return values for :meth:`Quantity.is_nan()` and :meth:`Quantity.is_infinite()`.
 
 

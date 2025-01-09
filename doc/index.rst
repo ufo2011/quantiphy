@@ -10,8 +10,8 @@
 QuantiPhy: Physical Quantities
 ==============================
 
-| Version: 2.18.0
-| Released: 2022-08-31
+| Version: 2.20
+| Released: 2024-04-27
 | Please post all bugs and suggestions at
   `Github <https://github.com/KenKundert/quantiphy/issues>`_
   (or contact me directly at
@@ -51,9 +51,10 @@ Features
   default employs SI scale factors.
 - Flexible unit conversion and scaling is supported to make it easy to convert 
   to or from any required form.
-- Provides a small but extensible collection of physical constants.
 - Supports the binary scale factors (*Ki*, *Mi*, etc.) along with the normal SI 
   scale factors (*k*, *M*, etc.).
+- When a quantity is created from a string, the actual digits specified can be 
+  used in any output, eliminating any loss of precision.
 
 
 Alternatives
@@ -90,6 +91,10 @@ Install with::
 
 Requires Python 3.6 or newer.  If you using an earlier version of Python,
 install version 2.10 of *QuantiPhy*.
+
+Alternately, *QuantiPhy* is also available in *Conda*.  Install it with::
+
+    conda install quantiphy --channel conda-forge
 
 You use *Quantity* to convert numbers and units in various forms to quantities:
 

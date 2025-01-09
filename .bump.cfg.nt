@@ -1,5 +1,5 @@
 major: 2
-minor: 18
+minor: 20
 patch: 0
 revision: 0
 type: release
@@ -20,3 +20,4 @@ files:
     doc/releases.rst:
         version: Version
         date: Released
+style: python

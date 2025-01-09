@@ -34,6 +34,7 @@ extensions = '''
     sphinx.ext.todo
     sphinx.ext.viewcode
     sphinx.ext.autosummary
+    sphinx_rtd_theme
 '''.split()
 
 # Add any paths that contain templates here, relative to this directory.
@@ -50,14 +51,14 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'quantiphy'
-copyright = u'2017-2022, Ken Kundert'
+copyright = u'2017-2024, Ken Kundert'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = '2.18.0'
+release = '2.20'
 # The short X.Y version.
 version = '.'.join(release.split('.')[0:2])
 
@@ -103,7 +104,7 @@ pygments_style = 'sphinx'
 # html_theme = 'nature'
 # Use default rather than my normal nature so we get the read-the-docs style on
 # that website.
-html_theme = 'default'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -288,3 +289,9 @@ class DocumentedPublicMethods(PublicMethods):
             attr.__doc__
             and not name.startswith('__')
         )
+
+
+suppress_warnings = [
+    'misc.highlighting_failure',
+        # suppress warning about the inability to parse a literal text block
+]
